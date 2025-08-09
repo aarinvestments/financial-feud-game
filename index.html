@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Feud</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Dark background */
+            color: #e2e8f0; /* Light text color */
+        }
+        /* Custom spinner for loading state */
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #4ade80;
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-4 sm:p-6">
+    
+    <!-- Main game container -->
+    <div id="game-container" class="bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-2xl w-full">
+        <h1 class="text-4xl sm:text-5xl font-extrabold text-center text-green-400 mb-6">
+            Financial Feud
+        </h1>
+        <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+            <p class="text-2xl font-semibold">
+                Score: <span id="score" class="text-green-400">0</span>
+            </p>
+            <div id="strikes-container" class="flex space-x-2">
+                <!-- Strike icons will be rendered here -->
+            </div>
+        </div>
+
+        <div id="game-board" class="space-y-6">
+            <p id="question-text" class="text-xl sm:text-2xl font-bold text-white text-center mb-8">
+                <!-- Question text will be rendered here -->
+            </p>
+
+            <div id="answers-container" class="grid grid-cols-1 gap-4">
+                <!-- Answer blocks will be rendered here -->
+            </div>
+
+            <form id="guess-form" class="flex mt-8 space-x-2">
+                <input
+                    type="text"
+                    id="guess-input"
+                    placeholder="Your guess here..."
+                    class="flex-1 p-3 rounded-lg bg-gray-900 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                    type="submit"
+                    id="guess-button"
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
+                >
+                    Guess
+                </button>
+            </form>
+
+            <div id="message-container" class="mt-4 text-center">
+                <!-- Messages will be rendered here -->
+            </div>
+        </div>
+        
+        <!-- Next question button -->
+        <div id="next-question-container" class="mt-8 hidden">
+            <button
+                id="next-question-button"
+                class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
+            >
+                Next Question
+            </button>
+        </div>
+        
+        <!-- Game over screen -->
+        <div id="game-over-modal" class="hidden fixed inset-0 bg-gray-950 bg-opacity-90 flex items-center justify-center z-50 p-4">
+            <div class="bg-gray-800 p-8 rounded-xl shadow-2xl text-center max-w-md w-full">
+                <h2 class="text-4xl font-extrabold text-green-400 mb-4">Game Over!</h2>
+                <p id="game-over-message" class="text-xl text-white mb-6">
+                    <!-- Game over message will be rendered here -->
+                </p>
+                <p class="text-2xl font-bold mb-8">Your final score is: <span id="final-score" class="text-green-400">0</span></p>
+                <button
+                    id="play-again-button"
+                    class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105"
+                >
+                    Play Again
+                </button>
+            </div>
+        </div>
+
+        <!-- Requested text and links at the bottom -->
+        <div class="mt-8 text-sm text-gray-500 text-center">
+            Darryl Wright III, I ask that you please take our <a href="https://financialliteracyindex.com/darrylwrightiii/quiz" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:underline">Financial Literacy Quiz</a> and/or get our free <a href="https://howmoneyworks.com/darrylwrightiii" target="_blank" rel="noopener noreferrer" class="text-green-400 hover:underline">EBook</a>.
+        </div>
+    </div>
+
+    <script>
+        // Sample data for the game
+        const questions = [
+            {
+                question: "We surveyed 100 people: What is a common monthly expense for a household?",
+                answers: [
+                    { text: "Rent / Mortgage", points: 42, revealed: false },
+                    { text: "Groceries", points: 28, revealed: false },
+                    { text: "Utilities", points: 15, revealed: false },
+                    { text: "Car", points: 10, revealed: false },
+                    { text: "Internet / TV", points: 5, revealed: false },
+                ],
+            },
+            {
+                question: "We surveyed 100 people: What's a common term for money put aside for future use?",
+                answers: [
+                    { text: "Savings", points: 55, revealed: false },
+                    { text: "Investment", points: 20, revealed: false },
+                    { text: "Emergency Fund", points: 15, revealed: false },
+                    { text: "Nest Egg", points: 10, revealed: false },
+                ],
+            },
+            {
+                question: "We surveyed 100 people: What's a common reason people go into debt?",
+                answers: [
+                    { text: "Credit Card Spending", points: 40, revealed: false },
+                    { text: "Medical Bills", points: 25, revealed: false },
+                    { text: "Student Loans", points: 20, revealed: false },
+                    { text: "Car Loans", points: 15, revealed: false },
+                ],
+            },
+            {
+                question: "Name a type of financial institution.",
+                answers: [
+                    { text: "Bank", points: 50, revealed: false },
+                    { text: "Credit Union", points: 30, revealed: false },
+                    { text: "Brokerage Firm", points: 15, revealed: false },
+                    { text: "Investment Bank", points: 5, revealed: false },
+                ],
+            },
+        ];
+
+        // Global state variables
+        let currentQuestionIndex = 0;
+        let strikes = 0;
+        let score = 0;
+
+        // DOM element references
+        const scoreElement = document.getElementById('score');
+        const strikesContainer = document.getElementById('strikes-container');
+        const questionTextElement = document.getElementById('question-text');
+        const answersContainer = document.getElementById('answers-container');
+        const guessForm = document.getElementById('guess-form');
+        const guessInput = document.getElementById('guess-input');
+        const messageContainer = document.getElementById('message-container');
+        const nextQuestionContainer = document.getElementById('next-question-container');
+        const nextQuestionButton = document.getElementById('next-question-button');
+        const gameOverModal = document.getElementById('game-over-modal');
+        const gameOverMessage = document.getElementById('game-over-message');
+        const finalScore = document.getElementById('final-score');
+        const playAgainButton = document.getElementById('play-again-button');
+
+        // Function to render the current game state
+        function renderGame() {
+            const currentQuestion = questions[currentQuestionIndex];
+            questionTextElement.textContent = currentQuestion.question;
+
+            // Render answers
+            answersContainer.innerHTML = '';
+            currentQuestion.answers.forEach((answer, index) => {
+                const answerDiv = document.createElement('div');
+                answerDiv.className = 'bg-gray-700 rounded-lg p-3 flex justify-between items-center shadow-md transition-colors duration-300';
+                answerDiv.innerHTML = `
+                    <div class="flex-1 text-left">
+                        <span class="text-sm sm:text-base font-semibold ${answer.revealed ? 'opacity-100' : 'opacity-0'}">
+                            ${answer.text}
+                        </span>
+                    </div>
+                    <div class="w-16 sm:w-20 text-right">
+                        <span class="text-lg sm:text-xl font-bold ${answer.revealed ? 'opacity-100 text-green-400' : 'opacity-0 text-white'}">
+                            ${answer.points}
+                        </span>
+                    </div>
+                `;
+                answersContainer.appendChild(answerDiv);
+            });
+
+            // Update score and strikes
+            scoreElement.textContent = score;
+            strikesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const strikeIcon = document.createElement('span');
+                strikeIcon.className = `text-3xl ${i < strikes ? 'text-red-500' : 'text-gray-600'}`;
+                strikeIcon.textContent = '❌';
+                strikesContainer.appendChild(strikeIcon);
+            }
+
+            // Show/hide next question button
+            const allAnswersRevealed = currentQuestion.answers.every(answer => answer.revealed);
+            if (allAnswersRevealed) {
+                nextQuestionContainer.classList.remove('hidden');
+                guessForm.classList.add('hidden');
+            } else {
+                nextQuestionContainer.classList.add('hidden');
+                guessForm.classList.remove('hidden');
+            }
+        }
+
+        // Function to handle a user's guess
+        function handleGuess(event) {
+            event.preventDefault();
+            const guess = guessInput.value.trim().toLowerCase();
+            if (!guess) return;
+
+            const currentQuestion = questions[currentQuestionIndex];
+            let isCorrect = false;
+
+            // Check if guess is correct and unrevealed
+            for (let i = 0; i < currentQuestion.answers.length; i++) {
+                const answer = currentQuestion.answers[i];
+                const normalizedAnswer = answer.text.toLowerCase();
+                if (!answer.revealed && normalizedAnswer.includes(guess)) {
+                    answer.revealed = true;
+                    score += answer.points;
+                    isCorrect = true;
+                    break;
+                }
+            }
+
+            if (isCorrect) {
+                messageContainer.innerHTML = `<p class="text-lg font-bold text-green-400">Correct!</p>`;
+            } else {
+                strikes++;
+                messageContainer.innerHTML = `<p class="text-lg font-bold text-red-400">Incorrect guess. Try again!</p>`;
+            }
+
+            guessInput.value = ''; // Clear input
+            renderGame(); // Re-render the game board
+
+            if (strikes >= 3 || currentQuestion.answers.every(answer => answer.revealed)) {
+                setTimeout(endGame, 1000); // Wait a moment before ending the game
+            }
+        }
+
+        // Function to end the game
+        function endGame() {
+            gameOverModal.classList.remove('hidden');
+            finalScore.textContent = score;
+            if (strikes >= 3) {
+                gameOverMessage.textContent = "You've used all your strikes!";
+            } else {
+                gameOverMessage.textContent = "You finished all the questions!";
+            }
+        }
+        
+        // Function to advance to the next question
+        function handleNextQuestion() {
+            if (currentQuestionIndex + 1 < questions.length) {
+                currentQuestionIndex++;
+                strikes = 0;
+                messageContainer.innerHTML = '';
+                renderGame();
+            } else {
+                endGame();
+            }
+        }
+
+        // Function to reset the game
+        function resetGame() {
+            currentQuestionIndex = 0;
+            strikes = 0;
+            score = 0;
+            questions.forEach(q => q.answers.forEach(a => a.revealed = false));
+            gameOverModal.classList.add('hidden');
+            messageContainer.innerHTML = '';
+            renderGame();
+        }
+
+        // Event Listeners
+        guessForm.addEventListener('submit', handleGuess);
+        nextQuestionButton.addEventListener('click', handleNextQuestion);
+        playAgainButton.addEventListener('click', resetGame);
+
+        // Initial render on page load
+        window.onload = renderGame;
+    </script>
+</body>
+</html>
